@@ -10,7 +10,7 @@ const subj = id => D.subjects.find(s => s.id === id);
 const seriesOf = id => Object.values(SE).filter(s => s.subject === id);
 const SUBORDER = ["Shabbat", "Hagim", "Other topics", ""];
 const sortSeries = a => a.sort((x, y) => SUBORDER.indexOf(x.sub) - SUBORDER.indexOf(y.sub) || (x.order ?? 0) - (y.order ?? 0) || y.items.length - x.items.length);
-const tags = s => `<span class="tag">Video</span>${s.a ? '<span class="tag o">Audio</span>' : ""}${s.n ? '<span class="tag">Notes</span>' : ""}${s.tr ? '<span class="tag">Transcript</span>' : ""}`;
+const tags = s => `<span class="tag">Video</span>${s.a ? '<span class="tag o">Audio</span>' : ""}${s.n ? '<span class="tag">Notes</span>' : ""}${s.tx || s.tr ? '<span class="tag">Transcript</span>' : ""}`;
 const primary = s => SE[s.s.find(x => !SE[x].topic) || s.s[0]];
 const total = Object.keys(SH).length;
 const WEEK = [["Monday · 6:00pm", "HaMaspik", "hamaspik-leovdei-hashem"], ["Tuesday · 8:00pm", "Moreh Nebuchim", "moreh-nebuchim"], ["Thursday · 6:00pm", "Hilchot Shabbat", "hilchot-shabbat"]];
@@ -97,22 +97,41 @@ function shiur(id, ctx) {
   ${x.e ? `<div class="vid"><iframe src="https://www.youtube-nocookie.com/embed/${id}?rel=0" title="${esc(x.t)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`
     : `<a class="vid poster" target="_blank" rel="noopener" href="https://youtu.be/${id}">${img(id, true)}<span>▶ Watch on YouTube</span></a><div class="none" style="margin-top:10px">This video has “Allow embedding” switched off on YouTube, so it cannot play on the site until that is switched on.</div>`}
   ${x.a ? `<div class="audio"><audio controls preload="none" src="${esc(x.a)}"></audio>${s.spotify ? `<a target="_blank" rel="noopener" href="${s.spotify}">Listen on Spotify →</a>` : ""}</div>` : ""}
-  ${x.n || x.tr ? `<div class="tabs">${x.n ? '<button class="on" data-tab="n">Notes</button>' : ""}${x.tr ? `<button data-tab="t" ${x.n ? "" : 'class="on"'}>Transcript</button>` : ""}</div>
-  <div class="notes" id="pane-n" ${x.n ? "" : "hidden"}>Loading notes…</div>
-  <div class="notes" id="pane-t" ${x.n ? "hidden" : ""}><p>The full transcript of this shiur is on Sofer.ai.</p><p><a target="_blank" rel="noopener" href="${esc(x.tr)}">Open the transcript →</a></p><p style="color:var(--mut);font-size:14px">On the real site the transcript text would sit here on the page, so that search and Google can read it.</p></div>`
-      : `<div class="none">Notes and a transcript have not been written for this shiur yet.</div>`}</div>
+  ${panes(x)}</div>
   <div><div class="box lk"><h3>This shiur</h3>${x.nd ? `<a target="_blank" rel="noopener" href="https://docs.google.com/document/d/${x.nd}/edit">Notes as a document<span>→</span></a>` : ""}${x.tr ? `<a target="_blank" rel="noopener" href="${esc(x.tr)}">Full transcript<span>→</span></a>` : ""}${s.spotify ? `<a target="_blank" rel="noopener" href="${s.spotify}">Spotify podcast<span>→</span></a>` : ""}<a target="_blank" rel="noopener" href="https://youtu.be/${id}">Like or comment on YouTube<span>→</span></a><a target="_blank" rel="noopener" href="${share}">Share on WhatsApp<span>→</span></a></div>
   <div class="box"><h3>In this series</h3><div class="nx" style="border-bottom:1px solid var(--line)">${img(id)}<div><small>Now playing · ${i + 1} of ${s.items.length}</small><b>${esc(x.t)}</b></div></div>${nx(next, "Next")}${nx(prev, "Previous")}<div style="padding-top:14px"><a class="btn sm" href="#/series/${s.slug}">Whole series</a></div></div>
   <div class="box"><h3>Ask the Rabbi</h3><p>Ask the Rabbi about this shiur, privately.</p><div style="margin-top:12px"><a class="btn ghost sm" href="#/page/ask">Ask a question</a></div></div></div></section>`;
 }
-function afterShiur(id) {
+function panes(x) {
+  const tabs = [x.sm && ["s", "Summary"], x.n && ["n", "Notes"], (x.tx || x.tr) && ["t", "Transcript"]].filter(Boolean);
+  if (!tabs.length) return `<div class="none">Notes and a transcript have not been written for this shiur yet.</div>`;
+  const first = x.n ? "n" : tabs[0][0];
+  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}</div>
+  ${tabs.map(([k]) => `<div class="notes${k === "t" ? " trans" : ""}" id="pane-${k}" ${k === first ? "" : "hidden"}>Loading…</div>`).join("")}`;
+}
+function showTab(k) {
+  document.querySelectorAll(".tabs button").forEach(o => o.classList.toggle("on", o.dataset.tab === k));
+  document.querySelectorAll(".notes").forEach(p => p.hidden = p.id !== "pane-" + k);
+}
+function afterShiur(id, tab) {
   const x = SH[id]; if (!x) return;
-  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
-    document.querySelectorAll(".tabs button").forEach(o => o.classList.toggle("on", o === b));
-    document.getElementById("pane-n").hidden = b.dataset.tab !== "n"; document.getElementById("pane-t").hidden = b.dataset.tab !== "t";
+  const pane = k => document.getElementById("pane-" + k);
+  const load = (k, url, fallback) => fetch(url).then(r => r.ok ? r.text() : Promise.reject()).then(h => { if (pane(k)) { pane(k).innerHTML = h; if (k === "t") wireTranscript(x); } }).catch(() => { if (pane(k)) pane(k).innerHTML = fallback; });
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  if (x.n) load("n", `notes/${id}.html`, `<p>The notes could not be loaded here. <a target="_blank" rel="noopener" href="https://docs.google.com/document/d/${x.nd}/edit">Open them as a document →</a></p>`);
+  if (x.sm) load("s", `summaries/${id}.html`, "<p>The summary could not be loaded.</p>");
+  if (x.tx) load("t", `transcripts/${id}.html`, `<p>The transcript could not be loaded here. <a target="_blank" rel="noopener" href="${esc(x.tr)}">Open it on Sofer.ai →</a></p>`);
+  else if (x.tr && pane("t")) pane("t").innerHTML = `<p>The transcript for this shiur has not been brought onto the page yet.</p><p><a target="_blank" rel="noopener" href="${esc(x.tr)}">Open it on Sofer.ai →</a></p>`;
+  if (tab && pane(tab)) showTab(tab);
+}
+function wireTranscript(x) {
+  const p = document.getElementById("pane-t"), au = document.querySelector(".audio audio");
+  p.querySelectorAll(".toc a").forEach(a => a.onclick = () => p.querySelector("#ts-" + a.dataset.sec).scrollIntoView({ behavior: "smooth", block: "start" }));
+  p.querySelectorAll(".ts").forEach(b => b.onclick = () => {
+    const t = +b.dataset.t;
+    if (au) { au.currentTime = t; au.play(); p.querySelectorAll(".ts.on").forEach(o => o.classList.remove("on")); b.classList.add("on"); }
+    else { const f = document.querySelector(".vid iframe"); if (f) { f.src = `https://www.youtube-nocookie.com/embed/${x.id}?start=${t}&autoplay=1&rel=0`; f.scrollIntoView({ behavior: "smooth", block: "center" }); } }
   });
-  if (x.n) fetch(`notes/${id}.html`).then(r => r.ok ? r.text() : Promise.reject()).then(h => { const p = document.getElementById("pane-n"); if (p) p.innerHTML = h; })
-    .catch(() => { const p = document.getElementById("pane-n"); if (p) p.innerHTML = `<p>The notes could not be loaded here. <a target="_blank" href="https://docs.google.com/document/d/${x.nd}/edit">Open them as a document →</a></p>`; });
 }
 function daily() {
   const ds = Object.values(SE).filter(s => s.daily).sort((a, b) => b.items.length - a.items.length), n = new Set(ds.flatMap(s => s.items)).size;
@@ -144,38 +163,41 @@ const notFound = () => `<section class="plain"><h3>Page not found</h3><p><a href
 
 /* ---------- search: titles straight away, notes text loaded on first use ---------- */
 let notesLoading;
-const loadNotes = () => notesLoading ||= new Promise(res => { const s = document.createElement("script"); s.src = "search.js"; s.onload = res; s.onerror = res; document.body.appendChild(s); });
+const loadJs = src => new Promise(res => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = res; document.body.appendChild(s); });
+const loadNotes = () => notesLoading ||= Promise.all([loadJs("search.js"), loadJs("search_t.js")]);
 function search(q) {
-  return `<section class="top pat"><div class="crumb">Search</div><h1>Search</h1><p>Searches every shiur title and the full text of every set of notes.</p>${searchBox(q)}</section><section class="res" id="res">${q ? "Searching…" : "Type a topic above."}</section>`;
+  return `<section class="top pat"><div class="crumb">Search</div><h1>Search</h1><p>Searches every shiur title and the full text of the notes and transcripts.</p>${searchBox(q)}</section><section class="res" id="res">${q ? "Searching…" : "Type a topic above."}</section>`;
 }
 async function runSearch(q) {
   const box = document.getElementById("res"); if (!q || !box) return;
   const w = q.toLowerCase().split(/\s+/).filter(Boolean), hl = t => w.reduce((a, x) => a.replace(new RegExp("(" + x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig"), "<mark>$1</mark>"), esc(t));
   const titleHits = Object.values(SH).filter(x => { const h = (x.t + " " + x.r + " " + x.s.map(s => SE[s].name).join(" ")).toLowerCase(); return w.every(y => h.includes(y)); });
   await loadNotes();
-  const N = window.NOTES || {}, seen = new Set(titleHits.map(x => x.id)), noteHits = [];
-  for (const [id, text] of Object.entries(N)) {
-    if (seen.has(id) || !SH[id]) continue;
-    const low = text.toLowerCase(); if (!w.every(y => low.includes(y))) continue;
-    let at = low.indexOf(q.toLowerCase()); const phrase = at >= 0; if (at < 0) at = low.indexOf(w[0]);
-    noteHits.push({ x: SH[id], phrase, snip: (at > 90 ? "… " : "") + text.slice(Math.max(0, at - 90), at + 190) + " …" });
+  const seen = new Set(titleHits.map(x => x.id)), noteHits = [];
+  for (const [src, where, tab] of [[window.NOTES || {}, "in the notes", "n"], [window.TRANS || {}, "in the transcript", "t"]]) {
+    for (const [id, text] of Object.entries(src)) {
+      if (seen.has(id) || !SH[id]) continue;
+      const low = text.toLowerCase(); if (!w.every(y => low.includes(y))) continue;
+      let at = low.indexOf(q.toLowerCase()); const phrase = at >= 0; if (at < 0) at = low.indexOf(w[0]);
+      seen.add(id); noteHits.push({ x: SH[id], phrase, where, tab, snip: (at > 90 ? "… " : "") + text.slice(Math.max(0, at - 90), at + 190) + " …" });
+    }
   }
   noteHits.sort((a, b) => b.phrase - a.phrase);
-  const row = (x, snip, where) => `<a class="hit" href="#/shiur/${x.id}">${img(x.id)}<div><div class="k">${esc(primary(x).name.split(/[:(]/)[0])} · ${where}</div><div class="t">${hl(x.t)}</div>${snip ? `<div class="s">${hl(snip)}</div>` : ""}</div></a>`;
+  const row = (x, snip, where, tab) => `<a class="hit" href="#/shiur/${x.id}${tab ? "/-/" + tab : ""}">${img(x.id)}<div><div class="k">${esc(primary(x).name.split(/[:(]/)[0])} · ${where}</div><div class="t">${hl(x.t)}</div>${snip ? `<div class="s">${hl(snip)}</div>` : ""}</div></a>`;
   if (location.hash !== "#/search/" + encodeURIComponent(q)) return;
-  box.innerHTML = `<p style="color:var(--mut);margin-bottom:8px"><b>${titleHits.length}</b> shiurim match by title and <b>${noteHits.length}</b> more mention it in their notes.</p>` +
-    titleHits.slice(0, 40).map(x => row(x, "", "title")).join("") + noteHits.slice(0, 60).map(h => row(h.x, h.snip, "in the notes")).join("") || "No results.";
+  box.innerHTML = `<p style="color:var(--mut);margin-bottom:8px"><b>${titleHits.length}</b> shiurim match by title and <b>${noteHits.length}</b> more mention it in their notes or transcript.</p>` +
+    titleHits.slice(0, 40).map(x => row(x, "", "title")).join("") + noteHits.slice(0, 80).map(h => row(h.x, h.snip, h.where, h.tab)).join("") || "No results.";
 }
 
 /* ---------- router ---------- */
 function route() {
-  const [, r = "", a = "", b = ""] = location.hash.split("/"), arg = decodeURIComponent(a);
+  const [, r = "", a = "", b = "", c = ""] = location.hash.split("/"), arg = decodeURIComponent(a);
   const html = r === "" ? home() : r === "shiurim" ? shiurim() : r === "subject" ? subject(arg) : r === "series" ? series(arg) : r === "shiur" ? shiur(arg, b)
     : r === "daily" ? daily() : r === "podcasts" ? podcasts() : r === "articles" ? articles() : r === "search" ? search(arg) : r === "page" ? page(arg) : notFound();
   app.innerHTML = html; window.scrollTo(0, 0);
   document.getElementById("nav").classList.remove("open");
   document.querySelectorAll("#nav a").forEach(l => l.classList.toggle("on", l.getAttribute("href") === "#/" + [r, a].filter(Boolean).join("/") || (l.getAttribute("href") === "#/shiurim" && ["subject", "series", "shiur", "search"].includes(r))));
-  if (r === "shiur") afterShiur(arg);
+  if (r === "shiur") afterShiur(arg, c);
   if (r === "search") runSearch(arg);
 }
 document.querySelector(".burger").onclick = () => document.getElementById("nav").classList.toggle("open");

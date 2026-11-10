@@ -182,3 +182,15 @@ h2.sh{font-family:Jost;font-weight:600;text-transform:uppercase;font-size:32px;c
 }
 .vid.poster{display:block}.vid.poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.75}
 .vid.poster span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--or);color:var(--navy);font:700 15px Jost;letter-spacing:2px;text-transform:uppercase;padding:16px 28px;white-space:nowrap}
+.hb{font-family:'Frank Ruhl Libre',serif;font-size:1.14em;color:var(--navy);font-weight:500;unicode-bidi:isolate}
+.trans p{margin:14px 0}
+.trans section{scroll-margin-top:90px}
+.trans h3{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:22px;margin-top:30px}
+.ts{font:600 12px Jost;letter-spacing:1px;color:var(--gold);background:#fff1dc;border:0;border-radius:20px;padding:5px 12px;cursor:pointer;text-transform:none}
+.ts:hover,.ts.on{background:var(--or);color:var(--navy)}
+.toc{background:var(--lav);padding:18px 22px;margin:4px 0 8px;columns:2;column-gap:34px}
+.toc b{display:block;font-family:Jost;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);font-size:13px;margin-bottom:8px;column-span:all}
+.toc a{display:flex;gap:10px;padding:5px 0;font-size:14px;font-weight:600;color:var(--navy);text-decoration:none;break-inside:avoid;line-height:1.4}
+.toc a span{font-family:Jost;color:var(--gold);min-width:44px;font-size:13px}
+.toc a:hover{color:var(--gold)}
+@media(max-width:800px){.toc{columns:1}}
