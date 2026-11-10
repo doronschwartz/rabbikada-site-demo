@@ -9,11 +9,11 @@ const fdate = d => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { w
 const subj = id => D.subjects.find(s => s.id === id);
 const seriesOf = id => Object.values(SE).filter(s => s.subject === id);
 const SUBORDER = ["Shabbat", "Hagim", "Other topics", ""];
-const sortSeries = a => a.sort((x, y) => SUBORDER.indexOf(x.sub) - SUBORDER.indexOf(y.sub) || (x.order ?? 0) - (y.order ?? 0) || y.items.length - x.items.length);
+const sortSeries = a => a.sort((x, y) => SUBORDER.indexOf(x.sub) - SUBORDER.indexOf(y.sub) || (x.daily ? 1 : 0) - (y.daily ? 1 : 0) || (x.order ?? 0) - (y.order ?? 0) || y.items.length - x.items.length);
 const tags = s => `<span class="tag">Video</span>${s.a ? '<span class="tag o">Audio</span>' : ""}${s.n ? '<span class="tag">Notes</span>' : ""}${s.tx || s.tr ? '<span class="tag">Transcript</span>' : ""}`;
 const primary = s => SE[s.s.find(x => !SE[x].topic) || s.s[0]];
 const total = Object.keys(SH).length;
-const WEEK = [["Monday · 6:00pm", "HaMaspik", "hamaspik-leovdei-hashem"], ["Tuesday · 8:00pm", "Moreh Nebuchim", "moreh-nebuchim"], ["Thursday · 6:00pm", "Hilchot Shabbat", "hilchot-shabbat"]];
+const WEEK = [["Monday · 6:00pm", "HaMaspik LeOvdei HaShem", "hamaspik-leovdei-hashem"], ["Tuesday · 8:00pm", "Moreh Nevuchim", "moreh-nevuchim"], ["Thursday · 6:00pm", "Hilchot Shabbat", "hilchot-shabbat"]];
 const latest = slug => SE[slug].items.map(i => SH[i]).sort((a, b) => b.p.localeCompare(a.p))[0];
 
 function card(s, ctx) {
@@ -29,11 +29,11 @@ const searchBox = (q = "") => `<form class="sbox" onsubmit="event.preventDefault
 function home() {
   const dh = SE["daily-halacha-hanukah"] || Object.values(SE).find(s => s.daily);
   return `<section class="hero pat"><div><div class="kick">About</div>
-  <h1>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker.</h1>
-  <p>Renowned for his clarity, depth and warmth, he brings together Torah scholarship, legal expertise and a passion for teaching. ${total} shiurim on Halacha, the Rambam and Jewish thought, to watch or listen to.</p>
+  <h1>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker</h1>
+  <p>Renowned for his clarity, depth and warmth, Dayan Kada brings together Torah scholarship, legal expertise and a passion for teaching. Over 1000 shiurim to watch or listen to.</p>
   ${searchBox()}<div class="b"><a class="btn" href="#/shiurim">Browse shiurim</a><a class="btn ghost" href="#/page/about">Know more</a></div></div>
   <div class="ph"><b>New photo here</b><span>The Rabbi speaking to a large audience of young people (photo to come from the Rabbi)</span></div></section>
-  <div class="week"><div class="l">THIS WEEK</div>${WEEK.map(([d, n, sl]) => { const l = latest(sl); return `<a href="#/series/${sl}"><div class="d J">${d}</div><div class="t">${n}</div><div class="s">Latest: ${esc(l.r.split(/[|,]/).pop().trim() || l.t)}</div></a>`; }).join("")}</div>
+  <div class="week"><div class="l">THIS WEEK</div>${WEEK.map(([d, n, sl]) => { const l = latest(sl); return `<a href="#/series/${sl}"><div class="d J">${d}</div><div class="t">${n}</div><div class="s">Latest: ${esc(refShort(l, SE[sl]).split("|").pop().trim() || l.t)}</div></a>`; }).join("")}</div>
   <section class="sec"><div class="head"><h2 class="sh">Latest shiurim</h2><a href="#/shiurim">All shiurim →</a></div><div class="cards">${WEEK.map(w => card(latest(w[2]), w[2])).join("")}</div></section>
   <section class="sec lavbg"><div class="head"><h2 class="sh">Shiurim by subject</h2><a href="#/shiurim">All ${Object.keys(SE).length} series →</a></div><div class="pg">
   ${D.subjects.map(s => { const n = s.id === "articles" ? D.articles.length : new Set(seriesOf(s.id).flatMap(x => x.items)).size; return `<a class="pl" href="#/${s.id === "articles" ? "articles" : "subject/" + s.id}"><div class="h">${s.heb}</div><div class="e">${s.name}</div><div class="c">${s.blurb}</div><div class="n">${n} ${s.id === "articles" ? "articles" : "shiurim"}</div></a>`; }).join("")}
@@ -50,7 +50,7 @@ function askBlock() {
 }
 function shiurim() {
   return `<section class="top pat"><div class="crumb">Shiurim</div><h1>All shiurim</h1><p>${total} shiurim in ${Object.keys(SE).length} series, by subject.</p>${searchBox()}</section>
-  <section class="sec">${D.subjects.filter(s => s.id !== "articles").map(s => `<div class="head" style="margin-top:34px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div><div class="sgrid">${sortSeries(seriesOf(s.id)).slice(0, 8).map(seriesCard).join("")}</div>`).join("")}</section>`;
+  <section class="sec">${D.subjects.filter(s => s.id !== "articles").map(s => `<div class="head" style="margin-top:34px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div><div class="sgrid">${sortSeries(seriesOf(s.id)).slice(0, 8).map(seriesCard).join("")}</div>${seriesOf(s.id).length > 8 ? `<p class="more"><a href="#/subject/${s.id}">See all ${seriesOf(s.id).length} series in ${s.name} →</a></p>` : ""}`).join("")}</section>`;
 }
 function subject(id) {
   const s = subj(id); if (!s) return notFound();
@@ -58,7 +58,8 @@ function subject(id) {
   const n = new Set(all.flatMap(x => x.items)).size;
   return `<section class="top pat"><div class="crumb"><a href="#/shiurim">Shiurim</a> › ${s.name}</div><h1>${s.name}</h1><div class="hh heb">${s.heb}</div><p>${s.blurb}</p>
   <div class="stats"><div><b>${n}</b><span>Shiurim</span></div><div><b>${all.length}</b><span>Series</span></div></div></section>
-  <section class="sec">${subs.map(sub => `${sub ? `<div class="subh">${sub}${sub === "Hagim" ? ` · <a href="#/daily" style="color:var(--navy)">see all Daily Halacha →</a>` : ""}</div>` : ""}<div class="sgrid">${all.filter(x => x.sub === sub).map(seriesCard).join("")}</div>`).join("")}</section>`;
+  <section class="sec">${subs.map(sub => { const full = all.filter(x => x.sub === sub && !x.daily), dly = all.filter(x => x.sub === sub && x.daily);
+    return `${sub && full.length ? `<div class="subh">${sub}</div>` : ""}${full.length ? `<div class="sgrid">${full.map(seriesCard).join("")}</div>` : ""}${dly.length ? `<div class="subh">${sub ? sub + " · " : ""}Daily Halacha clips</div><div class="sgrid">${dly.map(seriesCard).join("")}</div>` : ""}`; }).join("")}</section>`;
 }
 function series(slug) {
   const s = SE[slug]; if (!s) return notFound();
@@ -150,7 +151,7 @@ function articles() {
 }
 const PAGES = {
   about: ["About", `<p>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker.</p><h3>Still to come</h3><ul><li>The Rabbi's biography, from the current About page</li><li>A new photo from the Rabbi</li></ul>`],
-  live: ["Live", `<p>Join the weekly shiurim live on Zoom and YouTube.</p><h3>Weekly schedule</h3><ul><li>Monday 6:00pm · HaMaspik</li><li>Tuesday 8:00pm · Moreh Nebuchim</li><li>Thursday 6:00pm · Hilchot Shabbat</li></ul><h3>Still to come</h3><ul><li>The Zoom and YouTube links for each shiur</li></ul>`],
+  live: ["Live", `<p>Join the weekly shiurim live on Zoom and YouTube.</p><h3>Weekly schedule</h3><ul><li>Monday 6:00pm · HaMaspik LeOvdei HaShem</li><li>Tuesday 8:00pm · Moreh Nevuchim</li><li>Thursday 6:00pm · Hilchot Shabbat</li></ul><h3>Still to come</h3><ul><li>The Zoom and YouTube links for each shiur</li></ul>`],
   events: ["Events", `<p>Upcoming special classes and lectures.</p><h3>Still to come</h3><ul><li>A simple list the Rabbi's team can add to</li></ul>`],
   donate: ["Donate", `<h3>Still to decide</h3><ul><li>What Donate supports, and its link to the charity</li><li>The payment provider</li></ul>`],
 };
@@ -194,7 +195,7 @@ function route() {
   const [, r = "", a = "", b = "", c = ""] = location.hash.split("/"), arg = decodeURIComponent(a);
   const html = r === "" ? home() : r === "shiurim" ? shiurim() : r === "subject" ? subject(arg) : r === "series" ? series(arg) : r === "shiur" ? shiur(arg, b)
     : r === "daily" ? daily() : r === "podcasts" ? podcasts() : r === "articles" ? articles() : r === "search" ? search(arg) : r === "page" ? page(arg) : notFound();
-  app.innerHTML = html; window.scrollTo(0, 0);
+  app.innerHTML = html; placeScroll();
   document.getElementById("nav").classList.remove("open");
   document.querySelectorAll("#nav a").forEach(l => l.classList.toggle("on", l.getAttribute("href") === "#/" + [r, a].filter(Boolean).join("/") || (l.getAttribute("href") === "#/shiurim" && ["subject", "series", "shiur", "search"].includes(r))));
   if (r === "shiur") afterShiur(arg, c);
@@ -202,4 +203,13 @@ function route() {
 }
 document.querySelector(".burger").onclick = () => document.getElementById("nav").classList.toggle("open");
 document.getElementById("demo").textContent = `Demo · real shiurim from YouTube, ${D.built} · not the live site`;
+/* Back and forward return to where you were on the page; a new page starts at the top. */
+history.scrollRestoration = "manual";
+const POS = {}; let entry = 0, stamp = Date.now(), traversing = false;
+addEventListener("popstate", e => { POS[entry] = scrollY; traversing = !!(e.state && e.state.k); if (traversing) entry = e.state.k; });
+function placeScroll() {
+  if (traversing) { const y = POS[entry] || 0; traversing = false; scrollTo(0, y); [150, 500, 1200].forEach(ms => setTimeout(() => { if (Math.abs(scrollY - y) > 4 && history.state && history.state.k === entry && !moved) scrollTo(0, y); }, ms)); moved = false; }
+  else { entry = ++stamp; history.replaceState({ k: entry }, ""); scrollTo(0, 0); }
+}
+let moved = false; addEventListener("wheel", () => moved = true, { passive: true }); addEventListener("touchmove", () => moved = true, { passive: true });
 addEventListener("hashchange", route); route();
