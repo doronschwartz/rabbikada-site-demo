@@ -195,3 +195,8 @@ h2.sh{font-family:Jost;font-weight:600;text-transform:uppercase;font-size:32px;c
 .toc a:hover{color:var(--gold)}
 @media(max-width:800px){.toc{columns:1}}
 .more{margin-top:16px;font-family:Jost;font-weight:600;letter-spacing:1.2px;font-size:13px;text-transform:uppercase}.more a{color:var(--gold)}
+.cover{aspect-ratio:16/9;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.cover .heb{font-size:44px;color:var(--or);line-height:1}
+.cover b{font-family:Jost;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#fff;font-size:20px}
+.pl.wide{grid-column:1/-1;display:flex;align-items:center;gap:22px;padding:18px 22px}.pl.wide .e{margin:0}.pl.wide .c{margin-left:auto}
+@media(max-width:800px){.pl.wide{flex-wrap:wrap;gap:6px}.pl.wide .c{margin-left:0}}
