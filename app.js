@@ -39,7 +39,7 @@ function home() {
   ${D.subjects.map(s => { const n = s.id === "articles" ? D.articles.length : new Set(seriesOf(s.id).flatMap(x => x.items)).size; return `<a class="pl" href="#/${s.id === "articles" ? "articles" : "subject/" + s.id}"><div class="h">${s.heb}</div><div class="e">${s.name}</div><div class="c">${s.blurb}</div><div class="n">${n} ${s.id === "articles" ? "articles" : "shiurim"}</div></a>`; }).join("")}
   <a class="pl go" href="#/search/"><div class="h">חיפוש</div><div class="e">Search everything</div><div class="c">Every shiur and every set of notes, by topic</div></a></div></section>
   <section class="sec"><div class="head"><h2 class="sh">Daily Halacha</h2><a href="#/daily">All clips →</a></div><div class="cards c4">${(dh.items.filter(i => /hanuk|menorah|candle|antiochus|matityahu/i.test(SH[i].t)).slice(0, 4).length === 4 ? dh.items.filter(i => /hanuk|menorah|candle|antiochus|matityahu/i.test(SH[i].t)) : dh.items).slice(0, 4).map(i => { const s = SH[i]; return `<a class="card" href="#/shiur/${i}/${dh.slug}">${img(i)}<div class="bd"><div class="t">${esc(s.t)}</div><div class="m">${mins(s.d)}</div></div></a>`; }).join("")}</div></section>
-  <section class="three"><div class="tc"><h3>Podcasts</h3><p>Every series is its own podcast on Spotify and Apple.</p><a class="btn" href="#/podcasts">Listen now</a></div>
+  <section class="three"><div class="tc"><h3>Podcasts</h3><p>The same shiurim as audio: follow any series on Spotify or Apple and listen on the go.</p><a class="btn" href="#/podcasts">Listen now</a></div>
   <div class="tc"><h3>Live</h3><p>Join the weekly shiurim live on Zoom and YouTube, Monday, Tuesday and Thursday evenings.</p><a class="btn" href="#/page/live">Watch now</a></div>
   <div class="tc"><h3>Events</h3><p>Upcoming special classes and lectures.</p><a class="btn" href="#/page/events">See what’s coming</a></div></section>
   ${askBlock()}`;
@@ -49,8 +49,15 @@ function askBlock() {
   <form class="form" onsubmit="event.preventDefault();this.querySelector('.ok').textContent='Demo only: nothing was sent.'"><input placeholder="Your name"><input placeholder="Email"><textarea placeholder="Your question…"></textarea><button class="btn">Send question</button><div class="ok"></div></form></section>`;
 }
 function shiurim() {
+  const block = s => {
+    const all = sortSeries(seriesOf(s.id)), fold = all.filter(x => x.daily).length > 3, shown = fold ? all.filter(x => !x.daily) : all, dly = fold ? all.filter(x => x.daily) : [];
+    const subs = [...new Set(shown.map(x => x.sub))];
+    return `<div class="head" style="margin-top:44px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div>
+    ${subs.map(sub => `${sub ? `<div class="subh">${sub}</div>` : ""}<div class="sgrid">${shown.filter(x => x.sub === sub).map(seriesCard).join("")}</div>`).join("")}
+    ${dly.length ? `<div class="subh">Daily Halacha clips</div><div class="sgrid"><a class="sc" href="#/daily">${img(dly[0].items[0])}<div class="x"><div class="t">Daily Halacha: all ${dly.length} collections</div><div class="m">${new Set(dly.flatMap(x => x.items)).size} short clips, by time of year</div></div></a></div>` : ""}`;
+  };
   return `<section class="top pat"><div class="crumb">Shiurim</div><h1>All shiurim</h1><p>${total} shiurim in ${Object.keys(SE).length} series, by subject.</p>${searchBox()}</section>
-  <section class="sec">${D.subjects.filter(s => s.id !== "articles").map(s => `<div class="head" style="margin-top:34px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div><div class="sgrid">${sortSeries(seriesOf(s.id)).slice(0, 8).map(seriesCard).join("")}</div>${seriesOf(s.id).length > 8 ? `<p class="more"><a href="#/subject/${s.id}">See all ${seriesOf(s.id).length} series in ${s.name} →</a></p>` : ""}`).join("")}</section>`;
+  <section class="sec" style="padding-top:20px">${D.subjects.filter(s => s.id !== "articles").map(block).join("")}</section>`;
 }
 function subject(id) {
   const s = subj(id); if (!s) return notFound();
@@ -139,11 +146,21 @@ function daily() {
   return `<section class="top pat"><div class="crumb"><a href="#/shiurim">Shiurim</a> › <a href="#/subject/halacha">Halacha</a> › Daily Halacha</div><h1>Daily Halacha</h1><p>Short clips answering one practical question each, grouped by time of year.</p><div class="stats"><div><b>${n}</b><span>Clips</span></div><div><b>${ds.length}</b><span>Collections</span></div></div></section>
   <section class="sec"><div class="sgrid">${ds.map(seriesCard).join("")}</div></section>`;
 }
+const POD_TOP = ["moreh-nevuchim", "hamaspik-leovdei-hashem", "emunot-vedeot", "hilchot-shabbat"];
+function podCard(s) {
+  const clip = s.feed === "parasha" || s.feed === "feed", name = s.feed === "parasha" ? "Weekly Parashah" : s.feed === "feed" ? "Daily Halacha: Elul to Sukkot" : s.name;
+  const to = s.feed === "parasha" ? "#/subject/parasha" : s.feed === "feed" ? "#/daily" : "#/series/" + s.slug;
+  return `<div class="sc"><a href="${to}">${img(s.items[0])}</a><div class="x"><div class="t"><a href="${to}">${esc(name)}</a></div><div class="m">${subj(s.subject).name}${s.sub ? " · " + s.sub : ""}</div>
+  <div class="m"><a href="${to}" style="color:var(--navy)">${clip ? "Open on the site" : "Open the series"} →</a> &nbsp; <a target="_blank" rel="noopener" href="${s.spotify}" style="color:var(--gold)">Spotify →</a></div></div></div>`;
+}
 function podcasts() {
-  const seen = new Set(), shows = [];
-  Object.values(SE).filter(s => s.spotify).sort((a, b) => b.items.length - a.items.length).forEach(s => { if (!seen.has(s.spotify)) { seen.add(s.spotify); shows.push(s); } });
-  return `<section class="top pat"><div class="crumb">Podcasts</div><h1>Podcasts</h1><p>Every series is its own podcast. ${shows.length} shows are on Spotify, and the same feeds work in Apple Podcasts.</p></section>
-  <section class="sec"><div class="sgrid">${shows.map(s => `<div class="sc">${img(s.items[0])}<div class="x"><div class="t">${esc(s.feed === "parasha" ? "Weekly Parasha" : s.feed === "feed" ? "Daily Halacha" : s.name)}</div><div class="m"><a target="_blank" rel="noopener" href="${s.spotify}" style="color:var(--gold)">Open in Spotify →</a></div></div></div>`).join("")}</div></section>`;
+  const seen = new Set(), shows = [], rank = s => { const i = POD_TOP.indexOf(s.slug); return i >= 0 ? i : 10 + D.subjects.findIndex(x => x.id === s.subject) * 10 + SUBORDER.indexOf(s.sub); };
+  Object.values(SE).filter(s => s.spotify && !s.topic).sort((a, b) => rank(a) - rank(b) || b.items.length - a.items.length).forEach(s => { if (!seen.has(s.spotify)) { seen.add(s.spotify); shows.push(s); } });
+  const clips = s => s.daily || s.feed === "parasha" || s.feed === "feed", main = shows.filter(s => !clips(s)), short = shows.filter(clips);
+  return `<section class="top pat"><div class="crumb">Podcasts</div><h1>Podcasts</h1><p><b style="color:#fff">The same shiurim, to listen to.</b> Each series on the Shiurim page is also an audio podcast. Follow it in Spotify or Apple Podcasts and every new shiur arrives on your phone automatically, to hear on the way to work or in the car. Nothing here is separate from the Shiurim page: each one opens the same series.</p>
+  <div class="stats"><div><b>${shows.length}</b><span>Podcasts on Spotify</span></div></div></section>
+  <section class="sec"><div class="subh">Series</div><div class="sgrid">${main.map(podCard).join("")}</div>
+  <div class="subh">Short clips: Daily Halacha and Parashah</div><div class="sgrid">${short.map(podCard).join("")}</div></section>`;
 }
 function articles() {
   return `<section class="top pat"><div class="crumb">Articles</div><h1>Articles</h1><div class="hh heb">מאמרים</div><p>${D.articles.length} written pieces already on rabbikada.com.</p></section>
