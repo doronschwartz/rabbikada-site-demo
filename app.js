@@ -195,7 +195,7 @@ function articles() {
   <section class="res">${D.articles.map(a => `<div class="art"><div class="m">${fdate(a.date)}</div><div class="t">${esc(a.t)}</div><p>${esc(a.x)}</p></div>`).join("")}</section>`;
 }
 const PAGES = {
-  about: ["About", `<p>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker.</p><h3>Still to come</h3><ul><li>The Rabbi's biography, from the current About page</li><li>A new photo from the Rabbi</li></ul>`],
+  about: ["About", `<div class="welcome"><video controls preload="metadata" playsinline src="https://rabbikada.com/wp-content/uploads/2025/08/Welcome-Introduction.mp4"></video><div class="cap">A welcome from the Rabbi</div></div><p>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker.</p><h3>Still to come</h3><ul><li>The Rabbi's biography, from the current About page</li><li>A new photo from the Rabbi</li></ul>`],
   live: ["Live", `<p>Join the weekly shiurim live on Zoom and YouTube.</p><h3>Weekly schedule</h3><ul><li>Monday 6:00pm · HaMaspik LeOvdei HaShem</li><li>Tuesday 8:00pm · Moreh Nevuchim</li><li>Thursday 6:00pm · Hilchot Shabbat</li></ul><h3>Still to come</h3><ul><li>The Zoom and YouTube links for each shiur</li></ul>`],
   events: ["Events", `<p>Upcoming special classes and lectures.</p><h3>Still to come</h3><ul><li>A simple list the Rabbi's team can add to</li></ul>`],
   donate: ["Donate", `<h3>Still to decide</h3><ul><li>What Donate supports, and its link to the charity</li><li>The payment provider</li></ul>`],
