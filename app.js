@@ -112,6 +112,8 @@ window.filt = v => {
   document.querySelectorAll("#rows .row").forEach(r => { const ok = w.every(x => r.dataset.q.includes(x)); r.style.display = ok ? "" : "none"; n += ok; });
   document.getElementById("cnt").textContent = n + " shiurim";
 };
+/* Related shiurim (meeting, 11 Nov): worked out at build time from what each shiur discusses (build/related.py) */
+const related = x => (x.rl || []).map(i => SH[i]).filter(Boolean);
 function shiur(id, ctx) {
   const x = SH[id]; if (!x) return notFound();
   const s = SE[ctx] && SE[ctx].items.includes(id) ? SE[ctx] : primary(x), sj = subj(s.subject);
@@ -126,6 +128,7 @@ function shiur(id, ctx) {
   ${panes(x)}</div>
   <div><div class="box lk"><h3>This shiur</h3>${x.n ? pdfLink(x, "", "Download the notes (PDF)<span>⤓</span>") : ""}${x.nd ? `<a target="_blank" rel="noopener" href="https://docs.google.com/document/d/${x.nd}/edit">Notes as a document<span>→</span></a>` : ""}${x.tr ? `<a target="_blank" rel="noopener" href="${esc(x.tr)}">Full transcript<span>→</span></a>` : ""}${s.spotify ? `<a target="_blank" rel="noopener" href="${s.spotify}">Spotify podcast<span>→</span></a>` : ""}<a target="_blank" rel="noopener" href="https://youtu.be/${id}">Like or comment on YouTube<span>→</span></a><a target="_blank" rel="noopener" href="${share}">Share on WhatsApp<span>→</span></a></div>
   <div class="box"><h3>In this series</h3><div class="nx" style="border-bottom:1px solid var(--line)">${img(id)}<div><small>Now playing · ${i + 1} of ${s.items.length}</small><b>${esc(x.t)}</b></div></div>${nx(next, "Next")}${nx(prev, "Previous")}<div style="padding-top:14px"><a class="btn sm" href="#/series/${s.slug}">Whole series</a></div></div>
+  ${(r => r.length ? `<div class="box"><h3>Related shiurim</h3>${r.map(y => nx(y, primary(y).name.split(/[:(]/)[0])).join("")}</div>` : "")(related(x))}
   <div class="box"><h3>Ask the Rabbi</h3><p>Ask the Rabbi about this shiur, privately.</p><div style="margin-top:12px"><a class="btn ghost sm" href="#/page/ask">Ask a question</a></div></div></div></section>`;
 }
 /* The notes as a branded PDF ("Dayan Daniel Kada"), made by build/notes_pdf.py */
@@ -163,8 +166,10 @@ function wireTranscript(x) {
 }
 function daily() {
   const ds = Object.values(SE).filter(s => s.daily).sort((a, b) => b.items.length - a.items.length), n = new Set(ds.flatMap(s => s.items)).size;
+  /* the coming festival's collections first (meeting, 11 Nov) */
+  const f = (D.now || {}).festival, soon = f ? ds.filter(s => new RegExp(f.rx, "i").test(s.name)) : [], rest = ds.filter(s => !soon.includes(s));
   return `<section class="top pat"><div class="crumb"><a href="#/shiurim">Shiurim</a> › <a href="#/subject/halacha">Halacha</a> › Daily Halacha</div><h1>Daily Halacha</h1><p>Short clips answering one practical question each, grouped by time of year.</p><div class="stats"><div><b>${n}</b><span>Clips</span></div><div><b>${ds.length}</b><span>Collections</span></div></div></section>
-  <section class="sec"><div class="sgrid">${ds.map(seriesCard).join("")}</div></section>`;
+  <section class="sec">${soon.length ? `<div class="subh">Coming up: ${esc(f.name)}</div><div class="sgrid">${soon.map(seriesCard).join("")}</div><div class="subh" style="margin-top:28px">All collections</div>` : ""}<div class="sgrid">${rest.map(seriesCard).join("")}</div></section>`;
 }
 const POD_TOP = ["moreh-nevuchim", "hamaspik-leovdei-hashem", "emunot-vedeot", "hilchot-shabbat"];
 function podCard(s) {
