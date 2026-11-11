@@ -7,8 +7,9 @@ const img = (id, hi) => `<img loading="lazy" src="${hi ? big(id) : th(id)}" ${hi
 const mins = s => s >= 3600 ? `${Math.floor(s / 3600)} hr ${Math.round(s % 3600 / 60)} min` : `${Math.max(1, Math.round(s / 60))} min`;
 const fdate = d => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 const subj = id => D.subjects.find(s => s.id === id);
-const seriesOf = id => Object.values(SE).filter(s => s.subject === id);
-const SUBORDER = ["Hagim", "Shabbat", "Other topics", ""];
+/* "Hagim" is its own section and also stays inside Halacha: it shows the Halacha › Hagim series (Rabbi, 11 Nov) */
+const seriesOf = id => Object.values(SE).filter(s => id === "hagim" ? s.subject === "halacha" && s.sub === "Hagim" : s.subject === id);
+const SUBORDER = ["Shabbat", "Hagim", "Other topics", ""];
 const sortSeries = a => a.sort((x, y) => SUBORDER.indexOf(x.sub) - SUBORDER.indexOf(y.sub) || (x.daily ? 1 : 0) - (y.daily ? 1 : 0) || (x.order ?? 0) - (y.order ?? 0) || y.items.length - x.items.length);
 const tags = s => `<span class="tag">Video</span>${s.a ? '<span class="tag o">Audio</span>' : ""}${s.n ? '<span class="tag">Notes</span>' : ""}${s.tx || s.tr ? '<span class="tag">Transcript</span>' : ""}`;
 const primary = s => SE[s.s.find(x => !SE[x].topic) || s.s[0]];
@@ -21,7 +22,7 @@ function card(s, ctx) {
 }
 function seriesCard(s) {
   const n = s.items.length, notes = s.items.filter(i => SH[i].n).length;
-  return `<a class="sc" href="#/series/${s.slug}">${img(s.items[0])}<div class="x"><div class="t">${esc(s.name)}</div><div class="m">${n} shiur${n > 1 ? "im" : ""}${notes ? " · " + notes + " with notes" : ""}</div></div></a>`;
+  return `<a class="sc" href="#/series/${s.slug}">${s.slug === "other-shiurim" ? otherCover : img(s.items[0])}<div class="x"><div class="t">${esc(s.name)}</div><div class="m">${n} shiur${n > 1 ? "im" : ""}${notes ? " · " + notes + " with notes" : ""}</div></div></a>`;
 }
 const searchBox = (q = "") => `<form class="sbox" onsubmit="event.preventDefault();location.hash='#/search/'+encodeURIComponent(this.q.value.trim())"><input name="q" value="${esc(q)}" placeholder="Search any topic, e.g. Kiddush on Friday night" autocomplete="off"><button>Search</button></form>`;
 
@@ -49,25 +50,29 @@ function askBlock() {
   <form class="form" onsubmit="event.preventDefault();this.querySelector('.ok').textContent='Demo only: nothing was sent.'"><input placeholder="Your name"><input placeholder="Email"><textarea placeholder="Your question…"></textarea><button class="btn">Send question</button><div class="ok"></div></form></section>`;
 }
 const dhCover = `<div class="cover"><span class="heb">הלכה יומית</span><b>Daily Halacha</b></div>`;
+const otherCover = `<div class="cover"><span class="heb">שונות</span><b>Other topics</b></div>`;
+/* Daily Halacha comes straight after Shabbat (Rabbi: Shabbat, Daily Halacha, Hagim, Other topics); in the Hagim section, at the end */
+const withDaily = (subs, parts, dcard) => { if (dcard) { const at = subs.indexOf("Shabbat"); parts.splice(at >= 0 ? at + 1 : parts.length, 0, dcard); } return parts.join(""); };
 function shiurim() {
   const block = s => {
     const all = sortSeries(seriesOf(s.id)), fold = all.filter(x => x.daily).length > 3, shown = fold ? all.filter(x => !x.daily) : all, dly = fold ? all.filter(x => x.daily) : [];
-    const subs = [...new Set(shown.map(x => x.sub))];
+    const sb = x => s.id === "hagim" ? "" : x.sub, subs = [...new Set(shown.map(sb))];
+    const dcard = dly.length ? `<div class="subh">Daily Halacha</div><div class="sgrid"><a class="sc" href="#/daily">${dhCover}<div class="x"><div class="t">Daily Halacha: all ${dly.length} collections</div><div class="m">${new Set(dly.flatMap(x => x.items)).size} short clips, by time of year</div></div></a></div>` : "";
     return `<div class="head" style="margin-top:44px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div>
-    ${subs.map(sub => `${sub ? `<div class="subh">${sub}</div>` : ""}<div class="sgrid">${shown.filter(x => x.sub === sub).map(seriesCard).join("")}</div>`).join("")}
-    ${dly.length ? `<div class="subh">Daily Halacha clips</div><div class="sgrid"><a class="sc" href="#/daily">${dhCover}<div class="x"><div class="t">Daily Halacha: all ${dly.length} collections</div><div class="m">${new Set(dly.flatMap(x => x.items)).size} short clips, by time of year</div></div></a></div>` : ""}`;
+    ${withDaily(subs, subs.map(sub => `${sub ? `<div class="subh">${sub}</div>` : ""}<div class="sgrid">${shown.filter(x => sb(x) === sub).map(seriesCard).join("")}</div>`), dcard)}`;
   };
   return `<section class="top pat"><div class="crumb">Shiurim</div><h1>All shiurim</h1><p>${total} shiurim in ${Object.keys(SE).length} series, by subject.</p>${searchBox()}</section>
   <section class="sec" style="padding-top:20px">${D.subjects.filter(s => s.id !== "articles").map(block).join("")}</section>`;
 }
 function subject(id) {
   const s = subj(id); if (!s) return notFound();
-  const all = sortSeries(seriesOf(id)), subs = [...new Set(all.map(x => x.sub))];
+  const all = sortSeries(seriesOf(id)), sb = x => id === "hagim" ? "" : x.sub, subs = [...new Set(all.filter(x => !x.daily).map(sb))], dly = all.filter(x => x.daily);
   const n = new Set(all.flatMap(x => x.items)).size;
   return `<section class="top pat"><div class="crumb"><a href="#/shiurim">Shiurim</a> › ${s.name}</div><h1>${s.name}</h1><div class="hh heb">${s.heb}</div><p>${s.blurb}</p>
   <div class="stats"><div><b>${n}</b><span>Shiurim</span></div><div><b>${all.length}</b><span>Series</span></div></div></section>
-  <section class="sec">${subs.map(sub => { const full = all.filter(x => x.sub === sub && !x.daily), dly = all.filter(x => x.sub === sub && x.daily);
-    return `${sub && full.length ? `<div class="subh">${sub}</div>` : ""}${full.length ? `<div class="sgrid">${full.map(seriesCard).join("")}</div>` : ""}${dly.length ? `<div class="subh">${sub ? sub + " · " : ""}Daily Halacha clips</div><div class="sgrid">${dly.map(seriesCard).join("")}</div>` : ""}`; }).join("")}</section>`;
+  <section class="sec">${withDaily(subs, subs.map(sub => { const full = all.filter(x => sb(x) === sub && !x.daily);
+    return `${sub ? `<div class="subh">${sub}</div>` : ""}<div class="sgrid">${full.map(seriesCard).join("")}</div>`; }),
+    dly.length ? `<div class="subh">Daily Halacha</div><div class="sgrid">${dly.map(seriesCard).join("")}</div>` : "")}</section>`;
 }
 function series(slug) {
   const s = SE[slug]; if (!s) return notFound();
