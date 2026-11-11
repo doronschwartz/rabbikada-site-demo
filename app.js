@@ -137,7 +137,7 @@ function panes(x) {
   const tabs = [x.sm && ["s", "Summary"], x.n && ["n", "Notes"], (x.tx || x.tr) && ["t", "Transcript"]].filter(Boolean);
   if (!tabs.length) return `<div class="none">Notes and a transcript have not been written for this shiur yet.</div>`;
   const first = x.n ? "n" : tabs[0][0];
-  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}${x.n ? `<a class="pdf" href="pdf/${x.id}.pdf" target="_blank" rel="noopener">Notes as PDF ↗</a>` : ""}</div>
+  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}</div>
   ${tabs.map(([k]) => `<div class="notes${k === "t" ? " trans" : ""}" id="pane-${k}" ${k === first ? "" : "hidden"}>Loading…</div>`).join("")}`;
 }
 function showTab(k) {
@@ -147,7 +147,7 @@ function showTab(k) {
 function afterShiur(id, tab) {
   const x = SH[id]; if (!x) return;
   const pane = k => document.getElementById("pane-" + k);
-  const load = (k, url, fallback) => fetch(url).then(r => r.ok ? r.text() : Promise.reject()).then(h => { if (pane(k)) { pane(k).innerHTML = h; if (k === "t") wireTranscript(x); } }).catch(() => { if (pane(k)) pane(k).innerHTML = fallback; });
+  const load = (k, url, fallback) => fetch(url).then(r => r.ok ? r.text() : Promise.reject()).then(h => { if (pane(k)) { pane(k).innerHTML = (k === "n" ? `<div class="notesbar"><a class="pdf" href="pdf/${x.id}.pdf" target="_blank" rel="noopener">⤓ Notes as PDF</a></div>` : "") + h; if (k === "t") wireTranscript(x); } }).catch(() => { if (pane(k)) pane(k).innerHTML = fallback; });
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
   if (x.n) load("n", `notes/${id}.html`, `<p>The notes could not be loaded here. <a target="_blank" rel="noopener" href="https://docs.google.com/document/d/${x.nd}/edit">Open them as a document →</a></p>`);
   if (x.sm) load("s", `summaries/${id}.html`, "<p>The summary could not be loaded.</p>");
