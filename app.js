@@ -112,15 +112,17 @@ function shiur(id, ctx) {
     : `<a class="vid poster" target="_blank" rel="noopener" href="https://youtu.be/${id}">${img(id, true)}<span>▶ Watch on YouTube</span></a><div class="none" style="margin-top:10px">This video has “Allow embedding” switched off on YouTube, so it cannot play on the site until that is switched on.</div>`}
   ${x.a ? `<div class="audio"><audio controls preload="none" src="${esc(x.a)}"></audio>${s.spotify ? `<a target="_blank" rel="noopener" href="${s.spotify}">Listen on Spotify →</a>` : ""}</div>` : ""}
   ${panes(x)}</div>
-  <div><div class="box lk"><h3>This shiur</h3>${x.nd ? `<a target="_blank" rel="noopener" href="https://docs.google.com/document/d/${x.nd}/edit">Notes as a document<span>→</span></a>` : ""}${x.tr ? `<a target="_blank" rel="noopener" href="${esc(x.tr)}">Full transcript<span>→</span></a>` : ""}${s.spotify ? `<a target="_blank" rel="noopener" href="${s.spotify}">Spotify podcast<span>→</span></a>` : ""}<a target="_blank" rel="noopener" href="https://youtu.be/${id}">Like or comment on YouTube<span>→</span></a><a target="_blank" rel="noopener" href="${share}">Share on WhatsApp<span>→</span></a></div>
+  <div><div class="box lk"><h3>This shiur</h3>${x.n ? pdfLink(x, "", "Download the notes (PDF)<span>⤓</span>") : ""}${x.nd ? `<a target="_blank" rel="noopener" href="https://docs.google.com/document/d/${x.nd}/edit">Notes as a document<span>→</span></a>` : ""}${x.tr ? `<a target="_blank" rel="noopener" href="${esc(x.tr)}">Full transcript<span>→</span></a>` : ""}${s.spotify ? `<a target="_blank" rel="noopener" href="${s.spotify}">Spotify podcast<span>→</span></a>` : ""}<a target="_blank" rel="noopener" href="https://youtu.be/${id}">Like or comment on YouTube<span>→</span></a><a target="_blank" rel="noopener" href="${share}">Share on WhatsApp<span>→</span></a></div>
   <div class="box"><h3>In this series</h3><div class="nx" style="border-bottom:1px solid var(--line)">${img(id)}<div><small>Now playing · ${i + 1} of ${s.items.length}</small><b>${esc(x.t)}</b></div></div>${nx(next, "Next")}${nx(prev, "Previous")}<div style="padding-top:14px"><a class="btn sm" href="#/series/${s.slug}">Whole series</a></div></div>
   <div class="box"><h3>Ask the Rabbi</h3><p>Ask the Rabbi about this shiur, privately.</p><div style="margin-top:12px"><a class="btn ghost sm" href="#/page/ask">Ask a question</a></div></div></div></section>`;
 }
+/* The notes as a branded PDF ("Dayan Daniel Kada"), made by build/notes_pdf.py */
+const pdfLink = (x, cls, label = "⤓ Notes as PDF") => `<a class="${cls}" href="pdf/${x.id}.pdf" download="${esc(("Dayan Daniel Kada - " + x.t).replace(/[\\/:*?"<>|]/g, "").slice(0, 120))}.pdf">${label}</a>`;
 function panes(x) {
   const tabs = [x.sm && ["s", "Summary"], x.n && ["n", "Notes"], (x.tx || x.tr) && ["t", "Transcript"]].filter(Boolean);
   if (!tabs.length) return `<div class="none">Notes and a transcript have not been written for this shiur yet.</div>`;
   const first = x.n ? "n" : tabs[0][0];
-  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}</div>
+  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}${x.n ? pdfLink(x, "pdf") : ""}</div>
   ${tabs.map(([k]) => `<div class="notes${k === "t" ? " trans" : ""}" id="pane-${k}" ${k === first ? "" : "hidden"}>Loading…</div>`).join("")}`;
 }
 function showTab(k) {

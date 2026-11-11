@@ -202,3 +202,6 @@ h2.sh{font-family:Jost;font-weight:600;text-transform:uppercase;font-size:32px;c
 @media(max-width:800px){.pl.wide{flex-wrap:wrap;gap:6px}.pl.wide .c{margin-left:0}}
 .auto{font-size:13px;color:var(--mut);background:#fbf7f0;border-left:4px solid var(--or);padding:10px 14px}
 .trans p .ts{margin-right:8px;vertical-align:1px}
+.tabs .pdf{margin-left:auto;align-self:center;font-family:Jost;font-weight:600;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);border:1.5px solid var(--navy);padding:7px 12px;white-space:nowrap}
+.tabs .pdf:hover{background:var(--navy);color:#fff}
+@media(max-width:800px){.tabs{flex-wrap:wrap}.tabs .pdf{margin:8px 0 10px}}
