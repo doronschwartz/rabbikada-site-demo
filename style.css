@@ -200,3 +200,5 @@ h2.sh{font-family:Jost;font-weight:600;text-transform:uppercase;font-size:32px;c
 .cover b{font-family:Jost;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#fff;font-size:20px}
 .pl.wide{grid-column:1/-1;display:flex;align-items:center;gap:22px;padding:18px 22px}.pl.wide .e{margin:0}.pl.wide .c{margin-left:auto}
 @media(max-width:800px){.pl.wide{flex-wrap:wrap;gap:6px}.pl.wide .c{margin-left:0}}
+.auto{font-size:13px;color:var(--mut);background:#fbf7f0;border-left:4px solid var(--or);padding:10px 14px}
+.trans p .ts{margin-right:8px;vertical-align:1px}

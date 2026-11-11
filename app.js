@@ -8,7 +8,7 @@ const mins = s => s >= 3600 ? `${Math.floor(s / 3600)} hr ${Math.round(s % 3600 
 const fdate = d => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 const subj = id => D.subjects.find(s => s.id === id);
 const seriesOf = id => Object.values(SE).filter(s => s.subject === id);
-const SUBORDER = ["Shabbat", "Hagim", "Other topics", ""];
+const SUBORDER = ["Hagim", "Shabbat", "Other topics", ""];
 const sortSeries = a => a.sort((x, y) => SUBORDER.indexOf(x.sub) - SUBORDER.indexOf(y.sub) || (x.daily ? 1 : 0) - (y.daily ? 1 : 0) || (x.order ?? 0) - (y.order ?? 0) || y.items.length - x.items.length);
 const tags = s => `<span class="tag">Video</span>${s.a ? '<span class="tag o">Audio</span>' : ""}${s.n ? '<span class="tag">Notes</span>' : ""}${s.tx || s.tr ? '<span class="tag">Transcript</span>' : ""}`;
 const primary = s => SE[s.s.find(x => !SE[x].topic) || s.s[0]];
@@ -187,25 +187,56 @@ const loadNotes = () => notesLoading ||= Promise.all([loadJs("search.js"), loadJ
 function search(q) {
   return `<section class="top pat"><div class="crumb">Search</div><h1>Search</h1><p>Searches every shiur title and the full text of the notes and transcripts.</p>${searchBox(q)}</section><section class="res" id="res">${q ? "Searching…" : "Type a topic above."}</section>`;
 }
+/* Sounds-alike matching. Transliterations vary ("Noda Biyehudah", "Noda Bi Huda", "Nodabi Yoda"), so each search word is also turned into
+   its consonant skeleton and matched with flexible spelling: vowels, h and y may vary; s ~ tz/ts/z; k ~ kh/ch/c/q/h; v ~ b/w; spaces may split a word. */
+const SKEL = s => s.toLowerCase().replace(/(tz|ts|z)/g, "s").replace(/(kh|ch|ck|c|q)/g, "k").replace(/ph/g, "f").replace(/w/g, "v").replace(/[^a-z]/g, "").replace(/[aeiouyh]/g, "").replace(/(.)\1+/g, "$1");
+const CLS = { s: "(?:tz|ts|ss|s|z)", k: "(?:kh|ch|ck|c|q|k|h)", v: "[vwb]", b: "[bv]", f: "(?:ph|f|p)", t: "(?:th|t|s)" };
+function fuzzyRe(q) {
+  /* word by word: each search word must match one word in the text (which may be split by one space, "Bi Huda"), with nothing in between the words */
+  const words = q.trim().split(/\s+/).map(x => [x, SKEL(x)]).filter(([, s]) => s.length);
+  if (!words.length || words.reduce((a, [, s]) => a + s.length, 0) < 3 || words.length === 1 && words[0][1].length < 3) return null;
+  const gap = "(?:[aeiouyh'’\\-]|ch|kh| (?=[aeiouyh])){0,6}";
+  const one = ([w, sk]) => (/^[aeiouy]/i.test(w) ? "(?:[aeiouy]|h){0,2}" : /^h/i.test(w) ? "(?:ch|kh|h)[aeiouy]{0,2}" : "") + [...sk].map(c => (CLS[c] || c) + "+").join(gap) + "[aeiouyh]{0,3}";
+  return new RegExp("\\b" + words.map(one).join("[\\s\\-]*") + "\\b", "i");
+}
+/* Hebrew forms of names that the Sofer transcripts write in Hebrew letters */
+const ALIAS = [["noda biyehudah", "נודע ביהודה"], ["rambam", "רמב\"ם|רמבם|הרמב\"ם"], ["shulhan arukh", "שולחן ערוך|שלחן ערוך"], ["gemara", "גמרא|הגמרא"],
+  ["hatam sofer", "חתם סופר"], ["mishnah berurah", "משנה ברורה"], ["ben ish hai", "בן איש חי"], ["kaf hahayim", "כף החיים"], ["rav ovadia", "עובדיה"],
+  ["igrot moshe", "אגרות משה"], ["rashi", "רש\"י"], ["ramban", "רמב\"ן"], ["rabbeinu avraham", "רבינו אברהם|רבנו אברהם"], ["hazal", "חז\"ל"],
+  ["shabbat", "שבת"], ["hanukkah", "חנוכה|chanukah|chanukkah|hanukah"], ["pesah", "פסח|pesach"], ["teshuvah", "תשובה"], ["misvah", "מצוה|מצווה|mitzvah|mitzva|mitsvah"],
+  ["misvot", "מצות|מצוות|mitzvot|mitzvos|mitsvot"], ["bitahon", "ביטחון|בטחון|bitachon"], ["hames", "חמץ|chametz|chometz|hametz"], ["massah", "מצה|matzah|matza|matsa"],
+  ["sukkah", "סוכה|succah|sukka"], ["kiddush", "קידוש"], ["havdalah", "הבדלה"], ["tefillin", "תפילין|tefilin|tfillin"], ["sisit", "ציצית|tzitzit|tsitsit"]];
+function hebrewFor(q) { const sk = SKEL(q); const a = ALIAS.find(([e]) => SKEL(e) === sk); return a ? new RegExp(a[1], "i") : null; }
+
 async function runSearch(q) {
   const box = document.getElementById("res"); if (!q || !box) return;
   const w = q.toLowerCase().split(/\s+/).filter(Boolean), hl = t => w.reduce((a, x) => a.replace(new RegExp("(" + x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig"), "<mark>$1</mark>"), esc(t));
   const titleHits = Object.values(SH).filter(x => { const h = (x.t + " " + x.r + " " + x.s.map(s => SE[s].name).join(" ")).toLowerCase(); return w.every(y => h.includes(y)); });
+  box.innerHTML = titleHits.length ? `<p style="color:var(--mut)">Searching inside every shiur…</p>` : "Searching inside every shiur…";
   await loadNotes();
-  const seen = new Set(titleHits.map(x => x.id)), noteHits = [];
+  const seen = new Set(titleHits.map(x => x.id)), noteHits = [], fz = fuzzyRe(q), he = hebrewFor(q);
+  /* different spellings are only looked for when the exact words are rare, so common English words don't flood the results */
+  const exactCount = Object.values(window.TRANS || {}).concat(Object.values(window.NOTES || {})).reduce((a, s) => a + (w.every(y => s.toLowerCase().includes(y)) ? 1 : 0), titleHits.length);
+  const fuzzyOn = exactCount < 15;
+  const snip = (text, at, len) => { const a = Math.max(0, at - 90); return { snip: (a > 0 ? "… " : "") + text.slice(a, at + len + 160) + " …", mark: text.slice(at, at + len) }; };
   for (const [src, where, tab] of [[window.NOTES || {}, "in the notes", "n"], [window.TRANS || {}, "in the transcript", "t"]]) {
     for (const [id, text] of Object.entries(src)) {
       if (seen.has(id) || !SH[id]) continue;
-      const low = text.toLowerCase(); if (!w.every(y => low.includes(y))) continue;
-      let at = low.indexOf(q.toLowerCase()); const phrase = at >= 0; if (at < 0) at = low.indexOf(w[0]);
-      seen.add(id); noteHits.push({ x: SH[id], phrase, where, tab, snip: (at > 90 ? "… " : "") + text.slice(Math.max(0, at - 90), at + 190) + " …" });
+      const low = text.toLowerCase(); let hit = null;
+      if (w.every(y => low.includes(y))) { let at = low.indexOf(q.toLowerCase()); const phrase = at >= 0; if (at < 0) at = low.indexOf(w[0]); hit = { rank: phrase ? 3 : 2, ...snip(text, at, q.length) }; }
+      else if (he) { const m = he.exec(text); if (m) hit = { rank: 2, ...snip(text, m.index, m[0].length), how: "in Hebrew" }; }
+      if (!hit && fz && fuzzyOn) { const m = fz.exec(text); if (m) hit = { rank: 1, ...snip(text, m.index, m[0].length), how: "spelled “" + m[0].trim() + "”" }; }
+      if (!hit) continue;
+      seen.add(id); noteHits.push({ x: SH[id], where: where + (hit.how ? ", " + hit.how : ""), tab, ...hit });
     }
   }
-  noteHits.sort((a, b) => b.phrase - a.phrase);
-  const row = (x, snip, where, tab) => `<a class="hit" href="#/shiur/${x.id}${tab ? "/-/" + tab : ""}">${img(x.id)}<div><div class="k">${esc(primary(x).name.split(/[:(]/)[0])} · ${where}</div><div class="t">${hl(x.t)}</div>${snip ? `<div class="s">${hl(snip)}</div>` : ""}</div></a>`;
+  noteHits.sort((a, b) => b.rank - a.rank);
+  const mk = (s, m) => m ? esc(s).split(esc(m)).join(`<mark>${esc(m)}</mark>`) : hl(s);
+  const row = (x, h, where, tab) => `<a class="hit" href="#/shiur/${x.id}${tab ? "/-/" + tab : ""}">${img(x.id)}<div><div class="k">${esc(primary(x).name.split(/[:(]/)[0])} · ${where}</div><div class="t">${hl(x.t)}</div>${h ? `<div class="s">${h.rank === 3 || h.rank === 2 && !h.how ? hl(h.snip) : mk(h.snip, h.mark)}</div>` : ""}</div></a>`;
   if (location.hash !== "#/search/" + encodeURIComponent(q)) return;
-  box.innerHTML = `<p style="color:var(--mut);margin-bottom:8px"><b>${titleHits.length}</b> shiurim match by title and <b>${noteHits.length}</b> more mention it in their notes or transcript.</p>` +
-    titleHits.slice(0, 40).map(x => row(x, "", "title")).join("") + noteHits.slice(0, 80).map(h => row(h.x, h.snip, h.where, h.tab)).join("") || "No results.";
+  const nT = Object.keys(window.TRANS || {}).length;
+  box.innerHTML = `<p style="color:var(--mut);margin-bottom:8px"><b>${titleHits.length}</b> shiurim match by title and <b>${noteHits.length}</b> more mention it inside the shiur (searching the notes and the ${nT} transcripts, including different spellings).</p>` +
+    (titleHits.slice(0, 40).map(x => row(x, null, "title")).join("") + noteHits.slice(0, 100).map(h => row(h.x, h, h.where, h.tab)).join("") || "No results.");
 }
 
 /* ---------- router ---------- */
