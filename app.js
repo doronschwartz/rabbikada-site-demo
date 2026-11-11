@@ -122,7 +122,7 @@ function panes(x) {
   const tabs = [x.sm && ["s", "Summary"], x.n && ["n", "Notes"], (x.tx || x.tr) && ["t", "Transcript"]].filter(Boolean);
   if (!tabs.length) return `<div class="none">Notes and a transcript have not been written for this shiur yet.</div>`;
   const first = x.n ? "n" : tabs[0][0];
-  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}${x.n ? pdfLink(x, "pdf") : ""}</div>
+  return `<div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${k === first ? "on" : ""}">${l}</button>`).join("")}${x.n ? `<a class="pdf" href="pdf/${x.id}.pdf" target="_blank" rel="noopener">Notes as PDF ↗</a>` : ""}</div>
   ${tabs.map(([k]) => `<div class="notes${k === "t" ? " trans" : ""}" id="pane-${k}" ${k === first ? "" : "hidden"}>Loading…</div>`).join("")}`;
 }
 function showTab(k) {
