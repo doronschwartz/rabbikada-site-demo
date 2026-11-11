@@ -31,19 +31,29 @@ function home() {
   const dh = SE["daily-halacha-hanukah"] || Object.values(SE).find(s => s.daily);
   return `<section class="hero pat"><div><div class="kick">About</div>
   <h1>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker</h1>
-  <p>Renowned for his clarity, depth and warmth, Dayan Kada brings together Torah scholarship, legal expertise and a passion for teaching. Over 1000 shiurim to watch or listen to.</p>
-  ${searchBox()}<div class="b"><a class="btn" href="#/shiurim">Browse shiurim</a><a class="btn ghost" href="#/page/about">Know more</a></div></div>
+  <p>Renowned for his clarity, depth and warmth, Dayan Kada brings together Torah scholarship, legal expertise and a passion for teaching.</p>
+  ${searchBox()}<div class="b"><a class="btn" href="#/shiurim">Browse shiurim</a><a class="btn ghost" href="#/page/about">The Rabbi’s bio</a></div></div>
   <div class="ph"><b>New photo here</b><span>The Rabbi speaking to a large audience of young people (photo to come from the Rabbi)</span></div></section>
   <div class="week"><div class="l">THIS WEEK</div>${WEEK.map(([d, n, sl]) => { const l = latest(sl); return `<a href="#/series/${sl}"><div class="d J">${d}</div><div class="t">${n}</div><div class="s">Latest: ${esc(refShort(l, SE[sl]).split("|").pop().trim() || l.t)}</div></a>`; }).join("")}</div>
+  ${thisWeek()}
   <section class="sec"><div class="head"><h2 class="sh">Latest shiurim</h2><a href="#/shiurim">All shiurim →</a></div><div class="cards">${WEEK.map(w => card(latest(w[2]), w[2])).join("")}</div></section>
   <section class="sec lavbg"><div class="head"><h2 class="sh">Shiurim by subject</h2><a href="#/shiurim">All ${Object.keys(SE).length} series →</a></div><div class="pg">
   ${D.subjects.map(s => { const n = s.id === "articles" ? D.articles.length : new Set(seriesOf(s.id).flatMap(x => x.items)).size; return `<a class="pl" href="#/${s.id === "articles" ? "articles" : "subject/" + s.id}"><div class="h">${s.heb}</div><div class="e">${s.name}</div><div class="c">${s.blurb}</div><div class="n">${n} ${s.id === "articles" ? "articles" : "shiurim"}</div></a>`; }).join("")}
   <a class="pl go wide" href="#/search/"><div class="h">חיפוש</div><div class="e">Search everything</div><div class="c">Every shiur, and the full text of the notes and transcripts, by topic</div></a></div></section>
   <section class="sec"><div class="head"><h2 class="sh">Daily Halacha</h2><a href="#/daily">All clips →</a></div><div class="cards c4">${(dh.items.filter(i => /hanuk|menorah|candle|antiochus|matityahu/i.test(SH[i].t)).slice(0, 4).length === 4 ? dh.items.filter(i => /hanuk|menorah|candle|antiochus|matityahu/i.test(SH[i].t)) : dh.items).slice(0, 4).map(i => { const s = SH[i]; return `<a class="card" href="#/shiur/${i}/${dh.slug}">${img(i)}<div class="bd"><div class="t">${esc(s.t)}</div><div class="m">${mins(s.d)}</div></div></a>`; }).join("")}</div></section>
-  <section class="three"><div class="tc"><h3>Podcasts</h3><p>The same shiurim as audio: follow any series on Spotify or Apple and listen on the go.</p><a class="btn" href="#/podcasts">Listen now</a></div>
-  <div class="tc"><h3>Live</h3><p>Join the weekly shiurim live on Zoom and YouTube, Monday, Tuesday and Thursday evenings.</p><a class="btn" href="#/page/live">Watch now</a></div>
+  <section class="three"><div class="tc"><h3>Live</h3><p>Join the weekly shiurim live on Zoom and YouTube, Monday, Tuesday and Thursday evenings.</p><a class="btn" href="#/page/live">Watch now</a></div>
   <div class="tc"><h3>Events</h3><p>Upcoming special classes and lectures.</p><a class="btn" href="#/page/events">See what’s coming</a></div></section>
   ${askBlock()}`;
+}
+/* This week's Parashah and the coming festival, right under the weekly schedule (meeting, 11 Nov). D.now is worked out at build time. */
+function thisWeek() {
+  const n = D.now || {}, p = n.parasha, f = n.festival; if (!p && !f) return "";
+  const pItems = p ? p.slugs.flatMap(s => SE[s] ? SE[s].items.map(i => [i, s]) : []).sort((a, b) => SH[b[0]].p.localeCompare(SH[a[0]].p)).slice(0, 4) : [];
+  const fSeries = f ? Object.values(SE).filter(s => new RegExp(f.rx, "i").test(s.name)).sort((a, b) => (a.daily ? 1 : 0) - (b.daily ? 1 : 0) || b.items.length - a.items.length).slice(0, 4) : [];
+  const eve = f ? fdate(new Date(Date.parse(f.date) - 864e5).toISOString().slice(0, 10)) : "";
+  return `<section class="sec"><div class="head"><h2 class="sh">Parashah and festivals</h2></div>
+  ${p ? `<div class="subh">This week’s Parashah: ${esc(p.name)}</div>${pItems.length ? `<div class="cards c4">${pItems.map(([i, s]) => card(SH[i], s)).join("")}</div>` : `<p><a href="#/search/${encodeURIComponent(p.name)}">Find shiurim on Parashat ${esc(p.name)} →</a></p>`}` : ""}
+  ${f && fSeries.length ? `<div class="subh" style="margin-top:28px">Coming up: ${esc(f.name)} · begins the evening of ${eve}</div><div class="sgrid">${fSeries.map(seriesCard).join("")}</div>` : ""}</section>`;
 }
 function askBlock() {
   return `<section class="ask pat"><div><h2>Ask the Rabbi</h2><p>Send a question privately and the Rabbi will reply to you. Some questions, with names removed, may become Daily Halacha clips.</p></div>
@@ -58,10 +68,12 @@ function shiurim() {
     const all = sortSeries(seriesOf(s.id)), fold = all.filter(x => x.daily).length > 3, shown = fold ? all.filter(x => !x.daily) : all, dly = fold ? all.filter(x => x.daily) : [];
     const sb = x => s.id === "hagim" ? "" : x.sub, subs = [...new Set(shown.map(sb))];
     const dcard = dly.length ? `<div class="subh">Daily Halacha</div><div class="sgrid"><a class="sc" href="#/daily">${dhCover}<div class="x"><div class="t">Daily Halacha: all ${dly.length} collections</div><div class="m">${new Set(dly.flatMap(x => x.items)).size} short clips, by time of year</div></div></a></div>` : "";
-    return `<div class="head" style="margin-top:44px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div>
+    return `<div class="head" id="sj-${s.id}" style="margin-top:44px"><h2 class="sh">${s.name} <span class="heb" style="color:var(--or);font-size:24px">${s.heb}</span></h2><a href="#/subject/${s.id}">Open ${s.name} →</a></div>
     ${withDaily(subs, subs.map(sub => `${sub ? `<div class="subh">${sub}</div>` : ""}<div class="sgrid">${shown.filter(x => sb(x) === sub).map(seriesCard).join("")}</div>`), dcard)}`;
   };
-  return `<section class="top pat"><div class="crumb">Shiurim</div><h1>All shiurim</h1><p>${total} shiurim in ${Object.keys(SE).length} series, by subject.</p>${searchBox()}</section>
+  /* quick links that jump to each subject on this page (meeting, 11 Nov); buttons, because links would change the route */
+  const jump = `<div class="jump">${D.subjects.filter(s => s.id !== "articles").map(s => `<button onclick="document.getElementById('sj-${s.id}').scrollIntoView({behavior:'smooth'})">${s.name}</button>`).join("")}</div>`;
+  return `<section class="top pat"><div class="crumb">Shiurim</div><h1>All shiurim</h1><p>Every series, by subject.</p>${searchBox()}${jump}</section>
   <section class="sec" style="padding-top:20px">${D.subjects.filter(s => s.id !== "articles").map(block).join("")}</section>`;
 }
 function subject(id) {
