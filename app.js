@@ -168,8 +168,11 @@ function daily() {
   const ds = Object.values(SE).filter(s => s.daily).sort((a, b) => b.items.length - a.items.length), n = new Set(ds.flatMap(s => s.items)).size;
   /* the coming festival's collections first (meeting, 11 Nov) */
   const f = (D.now || {}).festival, soon = f ? ds.filter(s => new RegExp(f.rx, "i").test(s.name)) : [], rest = ds.filter(s => !soon.includes(s));
+  /* and this week's Parashah clips above it */
+  const p = (D.now || {}).parasha, pItems = p ? p.slugs.flatMap(s => SE[s] ? SE[s].items.map(i => [i, s]) : []).sort((a, b) => SH[b[0]].p.localeCompare(SH[a[0]].p)).slice(0, 8) : [];
+  const parBlock = pItems.length ? `<div class="subh">This week’s Parashah: ${esc(p.name)}</div><div class="cards c4">${pItems.map(([i, s]) => card(SH[i], s)).join("")}</div><div style="margin:10px 0 28px"><a href="#/series/${p.slugs[0]}">All shiurim on Parashat ${esc(p.name)} →</a></div>` : "";
   return `<section class="top pat"><div class="crumb"><a href="#/shiurim">Shiurim</a> › <a href="#/subject/halacha">Halacha</a> › Daily Halacha</div><h1>Daily Halacha</h1><p>Short clips answering one practical question each, grouped by time of year.</p><div class="stats"><div><b>${n}</b><span>Clips</span></div><div><b>${ds.length}</b><span>Collections</span></div></div></section>
-  <section class="sec">${soon.length ? `<div class="subh">Coming up: ${esc(f.name)}</div><div class="sgrid">${soon.map(seriesCard).join("")}</div><div class="subh" style="margin-top:28px">All collections</div>` : ""}<div class="sgrid">${rest.map(seriesCard).join("")}</div></section>`;
+  <section class="sec">${parBlock}${soon.length ? `<div class="subh">Coming up: ${esc(f.name)}</div><div class="sgrid">${soon.map(seriesCard).join("")}</div><div class="subh" style="margin-top:28px">All collections</div>` : ""}<div class="sgrid">${rest.map(seriesCard).join("")}</div></section>`;
 }
 const POD_TOP = ["moreh-nevuchim", "hamaspik-leovdei-hashem", "emunot-vedeot", "hilchot-shabbat"];
 function podCard(s) {
