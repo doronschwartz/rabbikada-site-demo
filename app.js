@@ -30,8 +30,8 @@ const searchBox = (q = "") => `<form class="sbox" onsubmit="event.preventDefault
 function home() {
   const dh = SE["daily-halacha-hanukah"] || Object.values(SE).find(s => s.daily);
   return `<section class="hero pat"><div><div class="kick">About</div>
-  <h1>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker</h1>
-  <p>Renowned for his clarity, depth and warmth, Dayan Kada brings together Torah scholarship, legal expertise and a passion for teaching.</p>
+  <h1>S&amp;P Rabbi, London Sephardi Beth Din Dayan and Sought-After Speaker</h1>
+  <p>Dayan Kada lectures throughout the United Kingdom, Europe and the United States on Halacha, Jewish thought and the challenges of contemporary life.</p>
   ${searchBox()}<div class="b"><a class="btn" href="#/shiurim">Browse shiurim</a><a class="btn ghost" href="#/page/about">The Rabbi’s bio</a></div></div>
   <div class="ph"><b>New photo here</b><span>The Rabbi speaking to a large audience of young people (photo to come from the Rabbi)</span></div></section>
   <div class="week"><div class="l">THIS WEEK</div>${WEEK.map(([d, n, sl]) => { const l = latest(sl); return `<a href="#/series/${sl}"><div class="d J">${d}</div><div class="t">${n}</div><div class="s">Latest: ${esc(refShort(l, SE[sl]).split("|").pop().trim() || l.t)}</div></a>`; }).join("")}</div>
@@ -195,7 +195,12 @@ function articles() {
   <section class="res">${D.articles.map(a => `<div class="art"><div class="m">${fdate(a.date)}</div><div class="t">${esc(a.t)}</div><p>${esc(a.x)}</p></div>`).join("")}</section>`;
 }
 const PAGES = {
-  about: ["About", `<div class="welcome"><video controls preload="metadata" playsinline src="https://rabbikada.com/wp-content/uploads/2025/08/Welcome-Introduction.mp4"></video><div class="cap">A welcome from the Rabbi</div></div><p>Holland Park community rabbi, London Sephardi Beth Din Dayan and sought-after speaker.</p><h3>Still to come</h3><ul><li>The Rabbi's biography, from the current About page</li><li>A new photo from the Rabbi</li></ul>`],
+  about: ["About Dayan Daniel Kada", `<div class="welcome"><video controls preload="metadata" playsinline src="https://rabbikada.com/wp-content/uploads/2025/08/Welcome-Introduction.mp4"></video><div class="cap">A welcome from the Rabbi</div></div><div class="bio"><p>Dayan Daniel Kada serves as Rabbi of Holland Park Spanish &amp; Portuguese Synagogue and as a Dayan of the Sephardi Beth Din of London. He previously served the Spanish &amp; Portuguese communities of Wembley and Lauderdale Road, London, over a period of ten years.</p>
+<p>A sought-after speaker, Dayan Kada lectures throughout the United Kingdom, Europe and the United States on Halacha, Jewish thought and the challenges of contemporary life. His teaching combines intellectual depth with clarity. He engages fully with demanding texts and complex questions, making them accessible without sacrificing their depth, and brings to his teaching the warmth and insight of an experienced communal rabbi.</p>
+<p>Born and raised in London, Dayan Kada pursued his yeshiva studies at Gateshead, where he learned under Rav Avrohom Gurwicz <bdi dir="rtl" lang="he">שליט״א</bdi>. He subsequently continued his studies in Jerusalem at Yeshivat Mir, under Rav Osher Arieli <bdi dir="rtl" lang="he">שליט״א</bdi>.</p>
+<p>He then undertook advanced rabbinic studies at Darkei Hora’ah LeRabanim, under the guidance of the former Sephardi Chief Rabbi of Israel, Rav Mordechai Eliyahu <bdi dir="rtl" lang="he">ז״ל</bdi>. During this period, he received Semikha from the Chief Rabbinate of Israel in Hilchot Shabbat, Niddah and Issur VeHeter. He subsequently continued his learning at the Hager’s Kollel in London.</p>
+<p>Dayan Kada qualified in Dayanut through Eretz Hemdah and the Montefiore Endowment, graduating with distinction.</p>
+<p>Alongside his extensive rabbinic training, Dayan Kada holds an LLB in Law with First Class Honours from King’s College London, where he was awarded a Dickson Poon Scholarship. He also completed the Ner Le’Elef international programme for outreach educators.</p></div>`],
   live: ["Live", `<p>Join the weekly shiurim live on Zoom and YouTube.</p><h3>Weekly schedule</h3><ul><li>Monday 6:00pm · HaMaspik LeOvdei HaShem</li><li>Tuesday 8:00pm · Moreh Nevuchim</li><li>Thursday 6:00pm · Hilchot Shabbat</li></ul><h3>Still to come</h3><ul><li>The Zoom and YouTube links for each shiur</li></ul>`],
   events: ["Events", `<p>Upcoming special classes and lectures.</p><h3>Still to come</h3><ul><li>A simple list the Rabbi's team can add to</li></ul>`],
   donate: ["Donate", `<h3>Still to decide</h3><ul><li>What Donate supports, and its link to the charity</li><li>The payment provider</li></ul>`],
