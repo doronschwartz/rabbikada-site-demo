@@ -8,7 +8,7 @@ const mins = s => s >= 3600 ? `${Math.floor(s / 3600)} hr ${Math.round(s % 3600 
 const fdate = d => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 const subj = id => D.subjects.find(s => s.id === id);
 /* "Hagim" is its own section and also stays inside Halacha: it shows the Halacha › Hagim series (Rabbi, 11 Nov) */
-const seriesOf = id => Object.values(SE).filter(s => id === "hagim" ? s.subject === "halacha" && s.sub === "Hagim" : s.subject === id);
+const seriesOf = id => Object.values(SE).filter(s => id === "hagim" ? s.subject === "halacha" && s.sub === "Hagim" : s.subject === id || (s.also || []).includes(id));
 const SUBORDER = ["Shabbat", "Hagim", "Other topics", ""];
 const sortSeries = a => a.sort((x, y) => SUBORDER.indexOf(x.sub) - SUBORDER.indexOf(y.sub) || (x.daily ? 1 : 0) - (y.daily ? 1 : 0) || (x.order ?? 0) - (y.order ?? 0) || y.items.length - x.items.length);
 const tags = s => `<span class="tag">Video</span>${s.a ? '<span class="tag o">Audio</span>' : ""}${s.n ? '<span class="tag">Notes</span>' : ""}${s.tx || s.tr ? '<span class="tag">Transcript</span>' : ""}`;
